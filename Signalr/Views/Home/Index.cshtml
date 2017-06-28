@@ -1,0 +1,243 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+    <meta charset="utf-8" />
+    <link href="~/Content/bootstrap.min.css" rel="stylesheet" />
+    @* BootStarp的引入*@
+    <style>
+        #message_box {
+            height: 400px;
+            overflow-y: scroll;
+        }
+
+        body {
+            /*background: #222;*/
+            font-family: 'microsoft yahei',Arial,sans-serif;
+            font-weight: 300;
+        }
+
+        .chatter {
+            margin: 0;
+            padding: 12px 12px 16px 12px;
+            font-size: 16px;
+            line-height: 22px;
+            -webkit-font-smoothing: antialiased;
+            font-smoothing: antialiased;
+            outline: 3px solid rgba(0,0,0,0.05);
+            background: #555;
+        }
+
+            .chatter .chatter_convo .chatter_msg_item {
+                position: relative;
+                margin: 5px 0 8px 0;
+                padding: 8px 10px;
+                max-width: 60%;
+                display: block;
+                background: rgba(255,255,255,0.26);
+                min-height: 38px;
+            }
+
+                .chatter .chatter_convo .chatter_msg_item .chatter_avatar {
+                    position: absolute;
+                    top: 0;
+                }
+
+                .chatter .chatter_convo .chatter_msg_item.chatter_msg_item_admin .chatter_avatar {
+                    left: -52px;
+                }
+
+                .chatter .chatter_convo .chatter_msg_item.chatter_msg_item_user .chatter_avatar {
+                    right: -52px;
+                }
+
+                .chatter .chatter_convo .chatter_msg_item .chatter_avatar img {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                }
+
+                .chatter .chatter_convo .chatter_msg_item.chatter_msg_item_admin {
+                    margin-left: 52px;
+                    float: left;
+                }
+
+                .chatter .chatter_convo .chatter_msg_item.chatter_msg_item_user {
+                    margin-right: 52px;
+                    float: right;
+                    background: rgba(255,255,255,0.16);
+                }
+
+                .chatter .chatter_convo .chatter_msg_item.chatter_msg_item_admin:before {
+                    content: '';
+                    position: absolute;
+                    top: 15px;
+                    left: -12px;
+                    z-index: 10;
+                    border: 6px solid transparent;
+                    border-right-color: rgba(255,255,255,0.26);
+                }
+
+        .chatter_msg_item.chatter_msg_item_user:before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            right: -12px;
+            z-index: 10;
+            border: 6px solid transparent;
+            border-left-color: rgba(255,255,255,0.16);
+        }
+
+        .chatter .chatter_convo .chatter_msg_item strong.chatter_name {
+            padding: 0 1px 1px 0;
+            font-weight: 300;
+            display: block;
+        }
+
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            border-radius: 0;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            margin: 2px;
+            border-radius: 0;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .clear {
+            clear: both;
+        }
+    </style>
+    @* 呈现消息 *@
+</head>
+<body>
+    <div class="container">
+        <div>名称：<p id="userName"></p></div>
+        <div>ConnectionID:<p id="conId"></p></div>
+
+        <div style="width:25%;border:1px solid #ff0000">
+            <div>在线用户列表</div>
+            <ul id="users"></ul>
+        </div>  
+        <div id="userBox">
+        </div>  
+        <div class="chatter">
+            <div class="chatter_convo" id="message_box">
+                <span class="chatter_msg_item chatter_msg_item_admin">
+                    <a href="" class="chatter_avatar"><img src="http://www.gbtags.com/gb/networks/avatars/1679dd15-8c8e-4c35-ae18-365c523562be.JPG" /></a>
+                    <strong class="chatter_name">李元芳</strong>Hello!
+                </span>
+            </div>
+            消息内容:
+            <textarea id="text_message" class="form-control" rows="3"></textarea>
+            <br />
+            <button id="btn_send" class="btn btn-block btn-success">Send</button>
+        </div>
+    </div>
+
+    <script src="~/scripts/jquery-1.10.2.min.js"></script>
+    <script src="~/scripts/jquery.signalR-2.2.2.min.js"></script>
+    @* 上述引入的两个文件的顺序不以交换，因为下面这个文件依赖于上面那个文件 *@
+    <script src="~/signalr/hubs"></script>
+    <!-- 本地没有，动态生成 -->
+    <script>
+        var clients = [];
+        var chat;
+        $(function () {
+            var $messageBox = $('#message_box');
+            var $textMessage = $('#text_message');
+            $textMessage.keydown(function (e) {
+                if (e.keyCode == 13) {
+                    event.keyCode = 0
+                    e.returnValue = false;
+                    sendMessage();
+                }
+            });
+            //客户端先与服务器连接起来，拿到服务器的代理操作对象
+            chat = $.connection.chatHub;
+            //注册客户端函数
+            @*hubConnection.client.receiveMessage = function (id, name, message) {
+                if ("@ViewBag.UID" === id) {
+                    $messageBox.append('<div class="clear"><span class="chatter_msg_item chatter_msg_item_user"> <a href="" class="chatter_avatar"><img src="http://www.gbtags.com/gb/networks/avatars/1679dd15-8c8e-4c35-ae18-365c523562be.JPG" /></a>' + message + '</span></div>')
+                } else {
+                    $messageBox.append('<div class="clear"><span class="chatter_msg_item chatter_msg_item_admin"><a href="" class="chatter_avatar"><img src="http://www.gbtags.com/gb/networks/avatars/1679dd15-8c8e-4c35-ae18-365c523562be.JPG" /></a>' + message + '</span></div>')
+                }
+                $messageBox[0].scrollTop = $messageBox[0].scrollHeight;
+            }*@
+            //注册显示信息的方法  
+            chat.client.addMessage = function (message, connectionId) {
+                debugger
+                if ($.inArray(connectionId, clients) == -1) {
+                    showWin(connectionId);
+                }
+                $("#" + connectionId).find("ul").each(function () {
+                    $(this).append('<li>' + message + '</li>');
+                })
+            }
+            //注册显示所有用户的方法  
+            chat.client.getUsers = function (data) {
+
+                if (data) {
+                    var json = $.parseJSON(data);
+
+                    console.info(json);
+                    $("#users").html(" ");
+                    for (var i = 0; i < json.length; i++) {
+                        var html = '<li>用户名:' + json[i].Name + '<button connectionId="' + json[i].ConnectionID + '" onclick="userChat(this)">聊天</button>';
+                        $("#users").append(html);
+                    }
+                }
+            }
+            //注册显示推出聊天提示的方法  
+            chat.client.exitUser = function (data) {
+                alert(data);
+            }
+            //注册显示个人信息的方法  
+            chat.client.showId = function (data) {
+                $("#conId").html(data);
+                clients.push(data);
+            }
+            //获取用户名称  
+            $('#userName').html(prompt('请输入您的名称', ''));
+
+            //启动连接到服务器
+            $.connection.hub.start().done(function () {
+                chat.server.getName($('#userName').html());
+                $('#btn_send').bind('click', function () {
+                    sendMessage();
+                });
+            });
+            function sendMessage() {
+                //调用服务端的函数
+                if ($textMessage.val().trim() === "") {
+                    alert("内容为空！");
+                } else {
+                    hubConnection.server.sendMessage("@ViewBag.UID", "", $textMessage.val());
+                }
+                setTimeout(' $("#text_message").val("")', 10);
+            }
+            //开始聊天  
+            function userChat(obj) {
+                var connectionId = $(obj).attr('connectionId');
+                showWin(connectionId);
+            }
+            function showWin(connectionId) {
+                //var connectionId = $(obj).attr('connectionId');  
+                clients.push(connectionId);
+                var html = '<div style="float:left;margin-left:30px;border:double" id="' + connectionId + '" connectionId="' + connectionId + '">' + connectionId + '"的房间聊天记录如下:<button onclick="exitChat(this)">退出</button><ul></ul><input type="text" /> <button onclick="sendMessage(this)">发送</button></div>';
+                $("#userBox").append(html);
+            }
+        });
+    </script>
+</body>
+</html>
