@@ -12,15 +12,16 @@ namespace Signalr.ChatHubs
     public class ChatHub : Hub
     {
         public static List<User> users = new List<User>();
-        public void SendMessage(string connectionId, string message)
+        public void SendMessage(string frormId,string connectionId, string message)
         {
             //  Clients.All.hello();
             var user = users.Where(s => s.ConnectionID == connectionId).FirstOrDefault();
+            var fromUser = users.Where(s => s.ConnectionID == frormId).FirstOrDefault();
             if (user != null)
             {
-                Clients.Client(connectionId).addMessage(message + "" + DateTime.Now, Context.ConnectionId);
+                Clients.Client(connectionId).addMessage(message + "" + DateTime.Now, Context.ConnectionId, frormId,fromUser.Name);
                 //给自己发送，把用户的ID传给自己  
-                Clients.Client(Context.ConnectionId).addMessage(message + "" + DateTime.Now, connectionId);
+                Clients.Client(Context.ConnectionId).addMessage(message + "" + DateTime.Now, connectionId, frormId,fromUser.Name);
             }
             else
             {
@@ -28,7 +29,7 @@ namespace Signalr.ChatHubs
             }
 
         }
-        [HubMethodName("exitChat")]
+        //[HubMethodName("exitChat")]
         public void GetName(string name)
         {
             //查询用户  
